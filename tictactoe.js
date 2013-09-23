@@ -4,7 +4,83 @@ var READER = require('readline').createInterface({
 });
 
 function Player(token) {
-  this.token = token
+  this.token = token;
+}
+
+function HumanPlayer(token) {
+  this.token = token;
+}
+
+HumanPlayer.prototype = new Player();
+
+HumanPlayer.prototype.getMove = function(ticTacToe) {
+  var player = this;
+
+  ticTacToe.render();
+
+  READER.question("Player " + this.token + " turn:", function(move) {
+    ticTacToe.playTurn(player, move.split(','));
+  });
+}
+
+function ComputerPlayer(token) {
+  this.token = token;
+}
+
+ComputerPlayer.prototype = new Player();
+
+ComputerPlayer.prototype.getMove = function(ticTacToe) {
+  var moves = this.allMoves(this.token, ticTacToe.board)
+  var move;
+
+  for (var possibleMove in moves) {
+    if (ticTacToe.checkVictory(this.token, moves[possibleMove])) {
+      move = possibleMove.split(',');
+    }
+  }
+
+  if (typeof move === 'undefined') {
+    for (var possibleMove in moves) {
+      move = possibleMove.split(',');
+      break;
+    }
+  }
+
+  //block opp. winning move
+
+  //take move that guarantees win
+
+  //block opp. move that guarantees win
+
+  //possibly execute all of these with a node tree
+
+  ticTacToe.playTurn(this, move);
+}
+
+ComputerPlayer.prototype.allMoves = function(token, board) {
+  var moves = {};
+
+  for ( var i = 0; i < 3; i++ ) {
+    for ( var j = 0; j < 3; j++ ) {
+      if(board[i][j] === "*") {
+        var newBoard = this.dupBoard(board);
+        newBoard[i][j] = token;
+        moves[[i,j]] = newBoard;
+      }
+    }
+  }
+
+  return moves;
+}
+
+ComputerPlayer.prototype.dupBoard = function(board) {
+  var newBoard = [];
+
+  board.forEach(function(column){
+    newBoard.push(column.slice());
+  });
+
+  return newBoard;
 }
 
 function TicTacToe(board) {
@@ -33,9 +109,8 @@ TicTacToe.prototype.render = function() {
 }
 
 TicTacToe.prototype.validMove = function(move) {
-  var coords = move.split(',');
 
-  var x = parseInt(coords[0]), y = parseInt(coords[1]);
+  var x = parseInt(move[0]), y = parseInt(move[1]);
   if (typeof this.board[x] === "undefined" || typeof this.board[x][y] === "undefined") {
     return false;
   } else if (this.board[x][y] !== "*") {
@@ -45,47 +120,41 @@ TicTacToe.prototype.validMove = function(move) {
   }
 }
 
-TicTacToe.prototype.playTurn = function(player) {
-  this.render();
-  var that = this;
+TicTacToe.prototype.playTurn = function(player, move) {
 
-  READER.question("Player " + player.token + " turn:", function(move) {
+  if(this.validMove(move)) {
 
-    if(that.validMove(move)) {
-      var coords = move.split(',');
+    this.board[move[0]][move[1]] = player.token;
 
-      that.board[coords[0]][coords[1]] = player.token;
-
-      if(that.checkDraw()) {
-        that.endGame();
-      } else if(that.checkVictory(player.token)) {
-        that.endGame(player.token);
-      } else {
-        if(player.token === "X") {
-           that.playTurn(that.players[1]);
-        } else {
-          that.playTurn(that.players[0]);
-        }
-      }
-
+    if(this.checkDraw(this.board)) {
+      this.endGame();
+    } else if(this.checkVictory(player.token, this.board)) {
+      this.endGame(player.token);
     } else {
-      console.log("invalid move");
-      that.playTurn(player);
+      if(player.token === "X") {
+         this.players[1].getMove(this);
+      } else {
+        this.players[0].getMove(this);
+      }
     }
-  });
+  } else {
+    console.log("invalid move");
+    player.getMove(this);
+  }
 }
 
-TicTacToe.prototype.checkVictory = function(token) {
+TicTacToe.prototype.checkVictory = function(token, board) {
   var victory = false;
+
   var horizontal = [[],[],[]];
-  var vertical = this.board;
-  var diagonal = [[this.board[0][0], this.board[1][1], this.board[2][2]],
-                  [this.board[2][0], this.board[1][1], this.board[0][2]]
+  var vertical = board;
+  var diagonal = [[board[0][0], board[1][1], board[2][2]],
+                  [board[2][0], board[1][1], board[0][2]]
                   ];
 
   for( var i = 0; i < 3; i++ ) {
     for ( var j = 0; j < 3; j++ ) {
-      horizontal[i][j] = this.board[j][i];
+      horizontal[i][j] = board[j][i];
     }
   }
 
@@ -102,8 +171,8 @@ TicTacToe.prototype.checkVictory = function(token) {
   return victory;
 }
 
-TicTacToe.prototype.checkDraw = function() {
-  return this.board.every(function(column){
+TicTacToe.prototype.checkDraw = function(board) {
+  return board.every(function(column){
     return column.every(function(space){
       return space !== "*";
     });
@@ -112,8 +181,8 @@ TicTacToe.prototype.checkDraw = function() {
 
 
 TicTacToe.prototype.startGame = function() {
-  this.players = [new Player("X"), new Player("O")];
-  this.playTurn(this.players[0]);
+  this.players = [new HumanPlayer("X"), new ComputerPlayer("O")];
+  this.players[0].getMove(this);
 }
 
 TicTacToe.prototype.endGame = function(token) {
