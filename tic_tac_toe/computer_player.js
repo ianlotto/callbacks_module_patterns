@@ -1,5 +1,6 @@
 var BoardNode = require('./board_node.js');
-n m\(function(root) {
+
+(function(root) {
   var UltimateObject = root.UltimateObject = (root.UltimateObject || {});
 
   var ComputerPlayer = UltimateObject.ComputerPlayer = function (token) {
