@@ -23,6 +23,16 @@ HumanPlayer.prototype.getMove = function(ticTacToe) {
   });
 }
 
+function BoardNode(board, move) {
+  this.move = move;
+  this.board = board;
+  this.children = [];
+}
+
+BoardNode.prototype.addChild = function(child) {
+  this.children.push(child);
+}
+
 function ComputerPlayer(token) {
   this.token = token;
 }
@@ -30,47 +40,37 @@ function ComputerPlayer(token) {
 ComputerPlayer.prototype = new Player();
 
 ComputerPlayer.prototype.getMove = function(ticTacToe) {
-  var moves = this.allMoves(this.token, ticTacToe.board)
   var move;
+  var that = this;
+  var currentTier = new BoardNode(ticTacToe.board);
+  currentTier = this.allMoves(this.token, currentTier);
 
-  for (var possibleMove in moves) {
-    if (ticTacToe.checkVictory(this.token, moves[possibleMove])) {
-      move = possibleMove.split(',');
+  currentTier.children.forEach(function(child) {
+    if(ticTacToe.checkVictory(that.token, child.board)) {
+      move = child.move;
     }
-  }
+  });
 
   if (typeof move === 'undefined') {
-    for (var possibleMove in moves) {
-      move = possibleMove.split(',');
-      break;
-    }
+    move = currentTier.children[0].move;
   }
-
-  //block opp. winning move
-
-  //take move that guarantees win
-
-  //block opp. move that guarantees win
-
-  //possibly execute all of these with a node tree
 
   ticTacToe.playTurn(this, move);
 }
 
-ComputerPlayer.prototype.allMoves = function(token, board) {
-  var moves = {};
-
+ComputerPlayer.prototype.allMoves = function(token, currentTier) {
   for ( var i = 0; i < 3; i++ ) {
     for ( var j = 0; j < 3; j++ ) {
-      if(board[i][j] === "*") {
-        var newBoard = this.dupBoard(board);
+      if(currentTier.board[i][j] === "*") {
+        var newBoard = this.dupBoard(currentTier.board);
         newBoard[i][j] = token;
-        moves[[i,j]] = newBoard;
+        newNode = new BoardNode(newBoard, [i, j]);
+        currentTier.addChild(newNode);
       }
     }
   }
 
-  return moves;
+  return currentTier;
 }
 
 ComputerPlayer.prototype.dupBoard = function(board) {
